@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect ScaleVault",
+        "description": "Paste the API key generated in ScaleVault under Account Settings → Integrations.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect. Check the URL and that ScaleVault is reachable.",
+      "invalid_auth": "Invalid API key."
+    },
+    "abort": {
+      "already_configured": "This ScaleVault account is already configured."
+    }
+  }
+}

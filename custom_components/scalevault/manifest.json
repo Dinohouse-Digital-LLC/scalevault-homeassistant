@@ -1,0 +1,12 @@
+{
+  "domain": "scalevault",
+  "name": "ScaleVault",
+  "codeowners": ["@TempusShift"],
+  "config_flow": true,
+  "documentation": "https://github.com/Dinohouse-Digital-LLC/scalevault-homeassistant",
+  "integration_type": "service",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/Dinohouse-Digital-LLC/scalevault-homeassistant/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
