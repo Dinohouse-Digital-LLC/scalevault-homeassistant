@@ -18,6 +18,17 @@
       "already_configured": "This ScaleVault account is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ScaleVault climate telemetry",
+        "description": "Pick which temperature/humidity sensors to forward to ScaleVault. Their state changes are batched and pushed roughly once a minute.",
+        "data": {
+          "sensors": "Sensors to forward"
+        }
+      }
+    }
+  },
   "services": {
     "log_feeding": {
       "name": "Log feeding",

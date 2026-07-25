@@ -8,8 +8,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultClient
-from .const import BASE_URL, CONF_BASE_URL, DOMAIN
+from .const import BASE_URL, CONF_BASE_URL, CONF_SENSORS, DOMAIN
 from .services import async_register_services, async_unregister_services
+from .telemetry import ScaleVaultTelemetryForwarder
 
 # Platform.SELECT exposes the account's animals/enclosures as dropdown "target"
 # helpers (see select.py) so quick-log services don't require a hand-typed
@@ -25,9 +26,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     # "client" is required; select.py adds "feeding_select"/"enclosure_select"
     # once its entities exist, so services.py can read the picked target.
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"client": client}
+    entry_data: dict = {"client": client}
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry_data
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_services(hass)
+
+    forwarder = ScaleVaultTelemetryForwarder(hass, client, entry.options.get(CONF_SENSORS, []))
+    forwarder.async_start()
+    entry_data["telemetry"] = forwarder
+    entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True
 
 
@@ -35,7 +42,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a ScaleVault config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        entry_data = hass.data[DOMAIN].pop(entry.entry_id)
+        entry_data["telemetry"].async_stop()
         if not hass.data[DOMAIN]:
             async_unregister_services(hass)
     return unload_ok
+
+
+async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Options (e.g. the forwarded-sensors list) changed — reload to pick them up."""
+    await hass.config_entries.async_reload(entry.entry_id)

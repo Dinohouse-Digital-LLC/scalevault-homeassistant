@@ -15,3 +15,14 @@ API_VALIDATE = "/api/ha/validate"
 API_TARGETS = "/api/ha/targets"
 API_INGEST = "/api/thermostats/ingest"
 API_ACTIONS = "/api/ha/actions"
+
+# Options-flow key: list of sensor entity_ids the user has chosen to forward
+# as climate telemetry (see telemetry.py). Lives in entry.options, not
+# entry.data, since it's changeable post-setup without re-entering the API key.
+CONF_SENSORS = "sensors"
+
+# How often buffered readings are pushed to ScaleVault, and the max readings
+# held in memory while ScaleVault is unreachable (matches the server's
+# per-batch cap in POST /api/thermostats/ingest).
+TELEMETRY_FLUSH_INTERVAL_SECONDS = 60
+TELEMETRY_MAX_BUFFERED_READINGS = 500

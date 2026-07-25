@@ -5,12 +5,18 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_API_KEY
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultAuthError, ScaleVaultClient, ScaleVaultConnectionError
-from .const import BASE_URL, CONF_BASE_URL, DOMAIN
+from .const import BASE_URL, CONF_BASE_URL, CONF_SENSORS, DOMAIN
 
 
 class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -52,3 +58,37 @@ class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
             schema_dict[vol.Optional(CONF_BASE_URL, default=BASE_URL)] = str
         schema = vol.Schema(schema_dict)
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    @staticmethod
+    def async_get_options_flow(config_entry: ConfigEntry) -> ScaleVaultOptionsFlow:
+        return ScaleVaultOptionsFlow()
+
+
+class ScaleVaultOptionsFlow(OptionsFlow):
+    """Pick which climate sensors get forwarded to ScaleVault as telemetry.
+
+    A plain multi-select of `sensor` entities (temperature/humidity device
+    class) — see telemetry.py for the state-change listener this feeds.
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(CONF_SENSORS, [])
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_SENSORS, default=current): selector.selector(
+                    {
+                        "entity": {
+                            "domain": "sensor",
+                            "device_class": ["temperature", "humidity"],
+                            "multiple": True,
+                        }
+                    }
+                )
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)
