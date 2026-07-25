@@ -9,7 +9,8 @@ log_feeding:
       description: >-
         Animal code (e.g. A-0001) or enclosure code (e.g. E-0004) — a
         single-animal enclosure resolves to that animal automatically.
-      required: true
+        Leave blank to use the "Feeding target" select entity's current pick.
+      required: false
       example: "A-0001"
       selector:
         text:
@@ -28,8 +29,10 @@ log_watering:
   fields:
     target:
       name: Target
-      description: Enclosure code (e.g. E-0004).
-      required: true
+      description: >-
+        Enclosure code (e.g. E-0004). Leave blank to use the "Enclosure
+        target" select entity's current pick.
+      required: false
       example: "E-0004"
       selector:
         text:
@@ -48,8 +51,10 @@ log_cleaning:
   fields:
     target:
       name: Target
-      description: Enclosure code (e.g. E-0004).
-      required: true
+      description: >-
+        Enclosure code (e.g. E-0004). Leave blank to use the "Enclosure
+        target" select entity's current pick.
+      required: false
       example: "E-0004"
       selector:
         text:

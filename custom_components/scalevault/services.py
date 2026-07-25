@@ -29,7 +29,10 @@ ATTR_NOTES = "notes"
 
 _ACTION_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_TARGET): cv.string,
+        # Optional: omit to use the matching ScaleVault select entity's current
+        # pick (select.py) — e.g. a dashboard button can call the service with
+        # no target and it feeds/waters/cleans whatever the dropdown is set to.
+        vol.Optional(ATTR_TARGET): cv.string,
         vol.Optional(ATTR_NOTES): cv.string,
     }
 )
@@ -40,21 +43,42 @@ _ACTION_BY_SERVICE = {
     SERVICE_LOG_CLEANING: "cleaned",
 }
 
+# Which select entity (see select.py) backs the default target for each action.
+_SELECT_KEY_BY_ACTION = {
+    "fed": "feeding_select",
+    "watered": "enclosure_select",
+    "cleaned": "enclosure_select",
+}
 
-def _get_client(hass: HomeAssistant) -> ScaleVaultClient:
-    clients: dict[str, ScaleVaultClient] = hass.data.get(DOMAIN, {})
-    if not clients:
+
+def _get_entry_data(hass: HomeAssistant) -> dict[str, Any]:
+    entries: dict[str, dict[str, Any]] = hass.data.get(DOMAIN, {})
+    if not entries:
         raise HomeAssistantError("No ScaleVault connection is configured")
     # Single-account scaffold: services aren't yet bound to a specific config
     # entry, so use whichever one is loaded.
-    return next(iter(clients.values()))
+    return next(iter(entries.values()))
+
+
+def _resolve_target(entry_data: dict[str, Any], action: str, call: ServiceCall) -> str:
+    if ATTR_TARGET in call.data:
+        return call.data[ATTR_TARGET]
+    select = entry_data.get(_SELECT_KEY_BY_ACTION[action])
+    code = select.current_code if select else None
+    if not code:
+        raise HomeAssistantError(
+            "No target given and no ScaleVault target is selected — pass a "
+            "target or pick one in the matching ScaleVault select entity."
+        )
+    return code
 
 
 async def _handle_action(hass: HomeAssistant, action: str, call: ServiceCall) -> None:
-    client = _get_client(hass)
+    entry_data = _get_entry_data(hass)
+    client: ScaleVaultClient = entry_data["client"]
     payload: dict[str, Any] = {
         "action": action,
-        "target": call.data[ATTR_TARGET],
+        "target": _resolve_target(entry_data, action, call),
         "idempotency_key": str(uuid.uuid4()),
         # HA's own configured local time, not the server's (which may be UTC
         # and land on the wrong calendar day near midnight for the user).
