@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultClient
-from .const import BASE_URL, CONF_BASE_URL, CONF_SENSORS, DOMAIN
+from .const import BASE_URL, CONF_BASE_URL, CONF_SENSOR_ENCLOSURE_MAP, CONF_SENSORS, DOMAIN
 from .services import async_register_services, async_unregister_services
 from .telemetry import ScaleVaultTelemetryForwarder
 
@@ -31,7 +31,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_services(hass)
 
-    forwarder = ScaleVaultTelemetryForwarder(hass, client, entry.options.get(CONF_SENSORS, []))
+    forwarder = ScaleVaultTelemetryForwarder(
+        hass, client, entry.options.get(CONF_SENSORS, []), entry.options.get(CONF_SENSOR_ENCLOSURE_MAP, {})
+    )
     forwarder.async_start()
     entry_data["telemetry"] = forwarder
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))

@@ -9,6 +9,11 @@ DOMAIN = "scalevault"
 BASE_URL = "https://scalevault.app"
 CONF_BASE_URL = "base_url"
 
+# Sent as the X-ScaleVault-Client header on every request, so ScaleVault's
+# Settings UI can tell a real custom-component connection apart from the
+# manual rest_command/webhook recipe (which never sends this header).
+CLIENT_IDENTIFIER = "home-assistant"
+
 # API paths (provisional — mirror the endpoints described in the ScaleVault
 # "home-assistant-integration" plan; keep in sync as the server side lands).
 API_VALIDATE = "/api/ha/validate"
@@ -16,10 +21,12 @@ API_TARGETS = "/api/ha/targets"
 API_INGEST = "/api/thermostats/ingest"
 API_ACTIONS = "/api/ha/actions"
 
-# Options-flow key: list of sensor entity_ids the user has chosen to forward
-# as climate telemetry (see telemetry.py). Lives in entry.options, not
-# entry.data, since it's changeable post-setup without re-entering the API key.
+# Options-flow keys: which sensor entity_ids the user has chosen to forward
+# as climate telemetry, and which ScaleVault enclosure code each maps to (see
+# telemetry.py). Live in entry.options, not entry.data, since they're
+# changeable post-setup without re-entering the API key.
 CONF_SENSORS = "sensors"
+CONF_SENSOR_ENCLOSURE_MAP = "sensor_enclosure_map"
 
 # How often buffered readings are pushed to ScaleVault, and the max readings
 # held in memory while ScaleVault is unreachable (matches the server's

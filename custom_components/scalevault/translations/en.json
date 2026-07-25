@@ -26,6 +26,10 @@
         "data": {
           "sensors": "Sensors to forward"
         }
+      },
+      "map": {
+        "title": "Map sensors to enclosures",
+        "description": "Optional: pick which ScaleVault enclosure each sensor belongs to, so readings land there automatically instead of showing up as an unmapped device. Each field below is one of the sensors you just selected (labeled by entity ID)."
       }
     }
   },

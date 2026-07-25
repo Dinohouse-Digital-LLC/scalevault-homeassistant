@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 _HUMIDITY_DEVICE_CLASS = "humidity"
 
 
-def _reading_from_state(state: State) -> dict[str, Any] | None:
+def _reading_from_state(state: State, enclosure_code: str | None) -> dict[str, Any] | None:
     """Build an ingest reading dict from a sensor's state, or None if the
     state isn't a usable numeric temperature/humidity value right now."""
     if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, None, ""):
@@ -46,6 +46,10 @@ def _reading_from_state(state: State) -> dict[str, Any] | None:
     }
     if friendly_name:
         reading["friendly_name"] = friendly_name
+    if enclosure_code:
+        # Options-flow mapping (config_flow.py's "map" step) — skips
+        # ScaleVault's manual/fuzzy device mapper entirely for this sensor.
+        reading["enclosure_code"] = enclosure_code
 
     if device_class == _HUMIDITY_DEVICE_CLASS:
         reading["humidity_pct"] = value
@@ -62,10 +66,17 @@ def _reading_from_state(state: State) -> dict[str, Any] | None:
 class ScaleVaultTelemetryForwarder:
     """Owns the state-change listener and the batched push to ScaleVault."""
 
-    def __init__(self, hass: HomeAssistant, client: ScaleVaultClient, sensor_entity_ids: list[str]) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        client: ScaleVaultClient,
+        sensor_entity_ids: list[str],
+        sensor_enclosure_map: dict[str, str] | None = None,
+    ) -> None:
         self._hass = hass
         self._client = client
         self._sensor_entity_ids = sensor_entity_ids
+        self._sensor_enclosure_map = sensor_enclosure_map or {}
         self._buffer: list[dict[str, Any]] = []
         self._unsub_state: Any = None
         self._unsub_timer: Any = None
@@ -93,7 +104,7 @@ class ScaleVaultTelemetryForwarder:
         new_state = event.data["new_state"]
         if new_state is None:
             return
-        reading = _reading_from_state(new_state)
+        reading = _reading_from_state(new_state, self._sensor_enclosure_map.get(new_state.entity_id))
         if reading is None:
             return
         self._buffer.append(reading)

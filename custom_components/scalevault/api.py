@@ -13,7 +13,7 @@ from typing import Any
 
 from aiohttp import ClientError, ClientResponseError, ClientSession, ClientTimeout
 
-from .const import API_ACTIONS, API_INGEST, API_TARGETS, API_VALIDATE
+from .const import API_ACTIONS, API_INGEST, API_TARGETS, API_VALIDATE, CLIENT_IDENTIFIER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +41,10 @@ class ScaleVaultClient:
         return {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
+            # Lets ScaleVault's Settings UI show "Connected via Home Assistant
+            # custom component" instead of just "connected" — the manual
+            # rest_command/webhook recipe never sends this header.
+            "X-ScaleVault-Client": CLIENT_IDENTIFIER,
         }
 
     async def async_validate(self) -> dict[str, Any]:
