@@ -48,7 +48,7 @@ class ScaleVaultClient:
 
         Raises ScaleVaultAuthError / ScaleVaultConnectionError on failure.
         """
-        data = await self._request("GET", API_VALIDATE)
+        data = await self._request("POST", API_VALIDATE)
         return data if isinstance(data, dict) else {}
 
     async def async_list_targets(self) -> list[dict[str, Any]]:

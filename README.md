@@ -61,9 +61,10 @@ roughly in build order:
 - [ ] **Climate telemetry → ScaleVault** — forward selected sensor readings to your enclosures
 - [ ] **Target mapping in the config flow** — pick which enclosure/animal each sensor maps to,
       from dropdowns populated by your ScaleVault account
-- [ ] **Quick-log actions** — Home Assistant services / buttons (`scalevault.log_feeding`,
-      `scalevault.log_watering`, …) so a physical button, NFC tag, or voice command logs a
-      husbandry event with one tap
+- [x] **Quick-log actions** — `scalevault.log_feeding` / `log_watering` / `log_cleaning` services so a
+      physical button, NFC tag, or voice command logs a husbandry event with one tap. Button entities
+      bound to a specific animal/enclosure (rather than a free-text target field) are still open — that
+      wants the Phase 1 target-mapping dropdowns below.
 - [ ] **Reverse feed (stretch)** — expose ScaleVault husbandry state (e.g. "overdue for weighing")
       as Home Assistant sensors for dashboards and automations
 

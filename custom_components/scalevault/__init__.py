@@ -9,6 +9,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultClient
 from .const import BASE_URL, CONF_BASE_URL, DOMAIN
+from .services import async_register_services, async_unregister_services
 
 # Platforms are added as capabilities land (e.g. Platform.BUTTON for quick-log
 # actions). Empty for the initial scaffold.
@@ -23,6 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    async_register_services(hass)
     return True
 
 
@@ -31,4 +33,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            async_unregister_services(hass)
     return unload_ok

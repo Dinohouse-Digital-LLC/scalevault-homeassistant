@@ -17,5 +17,49 @@
     "abort": {
       "already_configured": "This ScaleVault account is already configured."
     }
+  },
+  "services": {
+    "log_feeding": {
+      "name": "Log feeding",
+      "description": "Log a feeding in ScaleVault. Additive only — creates a new record, never edits or deletes one.",
+      "fields": {
+        "target": {
+          "name": "Target",
+          "description": "Animal code (e.g. A-0001) or enclosure code (e.g. E-0004) — a single-animal enclosure resolves to that animal automatically."
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Optional note to attach to the log entry."
+        }
+      }
+    },
+    "log_watering": {
+      "name": "Log water check",
+      "description": "Log a water check in ScaleVault. Additive only — creates a new record, never edits or deletes one.",
+      "fields": {
+        "target": {
+          "name": "Target",
+          "description": "Enclosure code (e.g. E-0004)."
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Optional note to attach to the log entry."
+        }
+      }
+    },
+    "log_cleaning": {
+      "name": "Log cleaning",
+      "description": "Log a cleaning in ScaleVault. Additive only — creates a new record, never edits or deletes one.",
+      "fields": {
+        "target": {
+          "name": "Target",
+          "description": "Enclosure code (e.g. E-0004)."
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Optional note to attach to the log entry."
+        }
+      }
+    }
   }
 }
