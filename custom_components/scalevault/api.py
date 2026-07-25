@@ -71,16 +71,26 @@ class ScaleVaultClient:
                 method, url, headers=self._headers, timeout=_TIMEOUT, **kwargs
             ) as resp:
                 if resp.status in (401, 403):
-                    raise ScaleVaultAuthError(f"ScaleVault rejected the API key ({resp.status})")
+                    detail = await self._error_detail(resp)
+                    raise ScaleVaultAuthError(detail or f"ScaleVault rejected the API key ({resp.status})")
                 resp.raise_for_status()
                 if resp.content_type == "application/json":
                     return await resp.json()
                 return None
         except ClientResponseError as err:
-            if err.status in (401, 403):
-                raise ScaleVaultAuthError from err
             _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
             raise ScaleVaultConnectionError from err
         except (ClientError, TimeoutError) as err:
             _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
             raise ScaleVaultConnectionError from err
+
+    @staticmethod
+    async def _error_detail(resp: Any) -> str | None:
+        """Best-effort extraction of the server's {"error": "..."} message, so
+        callers see e.g. "This key is not scoped for 'events:write'" instead of
+        a generic "rejected" message that hides the actual, actionable cause."""
+        try:
+            data = await resp.json()
+        except Exception:  # noqa: BLE001 - malformed/non-JSON body is not fatal here
+            return None
+        return data.get("error") if isinstance(data, dict) else None

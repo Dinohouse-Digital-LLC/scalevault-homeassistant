@@ -61,9 +61,14 @@ async def _handle_action(hass: HomeAssistant, action: str, call: ServiceCall) ->
     try:
         await client.async_log_action(payload)
     except ScaleVaultAuthError as err:
-        raise HomeAssistantError("ScaleVault rejected the connection key") from err
+        if "events:write" in str(err):
+            raise HomeAssistantError(
+                "Quick-log actions aren't enabled yet — turn on \"Quick-log actions\" for "
+                "this connection in ScaleVault under Settings → Home Assistant."
+            ) from err
+        raise HomeAssistantError(str(err) or "ScaleVault rejected the connection key") from err
     except ScaleVaultConnectionError as err:
-        raise HomeAssistantError("Could not reach ScaleVault") from err
+        raise HomeAssistantError(str(err) or "Could not reach ScaleVault") from err
 
 
 def async_register_services(hass: HomeAssistant) -> None:
