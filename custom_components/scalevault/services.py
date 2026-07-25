@@ -15,6 +15,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.util import dt as dt_util
 
 from .api import ScaleVaultAuthError, ScaleVaultClient, ScaleVaultConnectionError
 from .const import DOMAIN
@@ -55,6 +56,9 @@ async def _handle_action(hass: HomeAssistant, action: str, call: ServiceCall) ->
         "action": action,
         "target": call.data[ATTR_TARGET],
         "idempotency_key": str(uuid.uuid4()),
+        # HA's own configured local time, not the server's (which may be UTC
+        # and land on the wrong calendar day near midnight for the user).
+        "occurred_at": dt_util.now().isoformat(timespec="seconds"),
     }
     if ATTR_NOTES in call.data:
         payload["notes"] = call.data[ATTR_NOTES]
