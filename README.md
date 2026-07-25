@@ -47,9 +47,9 @@ and restart.
    Copy it — it is shown only once.
 2. In Home Assistant: **Settings → Devices & Services → Add Integration → ScaleVault**.
 3. Paste the API key.
-4. To forward climate telemetry, open the ScaleVault integration's **Configure** and pick your
-   temperature/humidity sensors. Their state changes are batched and pushed automatically —
-   reload the integration (or revisit Configure) any time you add or remove sensors.
+4. To forward climate telemetry, open the ScaleVault integration's **Configure**, pick your
+   temperature/humidity sensors, then optionally map each one to an enclosure. State changes are
+   batched and pushed automatically — revisit Configure any time you add, remove, or remap sensors.
 
 The key is account-scoped and carries only the permissions you grant (climate telemetry by
 default; husbandry actions and read access are separate opt-ins). It is **not** a login and does
@@ -61,12 +61,13 @@ This integration is the Home Assistant half of ScaleVault's
 [`home-assistant-integration` plan](https://github.com/Dinohouse-Digital-LLC). Planned capabilities,
 roughly in build order:
 
-- [x] **Climate telemetry → ScaleVault** — pick sensors in the integration's options (gear icon → Configure)
-      and their state changes are batched and pushed automatically, no `rest_command` YAML required. Mapping
-      each device to a specific enclosure still happens in ScaleVault's device mapper (Settings →
-      Home Assistant) — config-flow sensor-to-enclosure dropdowns are still open.
+- [x] **Climate telemetry → ScaleVault** — pick sensors in the integration's options (gear icon → Configure),
+      optionally map each one to an enclosure right there, and their state changes are batched and pushed
+      automatically — no `rest_command` YAML, no manual device mapping required.
 - [x] **Target dropdowns** — `select.scalevault_feeding_target` / `select.scalevault_enclosure_target`
       list your account's animals/enclosures by name (`targets:list` scope), fetched at setup.
+- [x] **Connection status in ScaleVault** — Settings → Home Assistant shows whether this component or the
+      manual webhook recipe is actually talking to your account.
 - [x] **Quick-log actions** — `scalevault.log_feeding` / `log_watering` / `log_cleaning` services so a
       physical button, NFC tag, or voice command logs a husbandry event with one tap. `target` is now
       optional — omit it to use the matching select entity's current pick instead of a hand-typed code.
