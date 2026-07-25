@@ -5,7 +5,8 @@
         "title": "Connect ScaleVault",
         "description": "Paste the API key generated in ScaleVault under Account Settings → Integrations.",
         "data": {
-          "api_key": "API key"
+          "api_key": "API key",
+          "base_url": "ScaleVault URL (advanced — leave default unless testing against a dev/staging server)"
         }
       }
     },

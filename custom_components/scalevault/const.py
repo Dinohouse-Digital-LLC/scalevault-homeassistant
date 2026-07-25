@@ -2,9 +2,12 @@
 
 DOMAIN = "scalevault"
 
-# ScaleVault is a hosted service at a fixed URL, so the integration only asks the
-# user for an API key — the base URL is not configurable.
+# ScaleVault is a hosted service at a fixed URL, so normal setup only asks the
+# user for an API key. Advanced Mode users (HA profile toggle) additionally see
+# a base_url field in the config flow, so developers can point at a dev/staging
+# server — see config_flow.py.
 BASE_URL = "https://scalevault.app"
+CONF_BASE_URL = "base_url"
 
 # API paths (provisional — mirror the endpoints described in the ScaleVault
 # "home-assistant-integration" plan; keep in sync as the server side lands).
