@@ -64,9 +64,14 @@ class ScaleVaultClient:
         """Push a batch of climate readings to ScaleVault."""
         await self._request("POST", API_INGEST, json={"readings": readings})
 
-    async def async_log_action(self, payload: dict[str, Any]) -> None:
-        """Log a quick husbandry action (feeding, watering, ...)."""
-        await self._request("POST", API_ACTIONS, json=payload)
+    async def async_log_action(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        """Log a quick husbandry action (feeding, watering, ...).
+
+        Returns the parsed response body — callers that only care whether the
+        call succeeded can ignore it; the `key`-based service inspects it for
+        per-pair results when a key fans out to multiple actions/targets.
+        """
+        return await self._request("POST", API_ACTIONS, json=payload)
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         url = f"{self._base_url}{path}"

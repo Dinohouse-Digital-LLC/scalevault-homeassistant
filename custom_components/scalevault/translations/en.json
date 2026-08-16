@@ -75,6 +75,20 @@
           "description": "Optional note to attach to the log entry."
         }
       }
+    },
+    "log_action": {
+      "name": "Log action key",
+      "description": "Trigger an action key configured in ScaleVault under Settings → Home Assistant, instead of a fixed action/target. What the key actually does (which action(s), which target(s)) is edited there, not here. A key can map to more than one action and/or target; ScaleVault performs every combination and this service raises an error naming any that failed.",
+      "fields": {
+        "key": {
+          "name": "Key",
+          "description": "The action key's name, as configured in ScaleVault."
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Optional note to attach to the log entry(ies). Overrides the key's configured notes, if any."
+        }
+      }
     }
   }
 }

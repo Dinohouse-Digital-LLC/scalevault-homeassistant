@@ -71,6 +71,10 @@ roughly in build order:
 - [x] **Quick-log actions** — `scalevault.log_feeding` / `log_watering` / `log_cleaning` services so a
       physical button, NFC tag, or voice command logs a husbandry event with one tap. `target` is now
       optional — omit it to use the matching select entity's current pick instead of a hand-typed code.
+- [x] **Action keys** — `scalevault.log_action` takes just a `key`, configured under ScaleVault's
+      Settings → Home Assistant to mean whatever action(s)/target(s) you want. Reassigning what a
+      button does becomes an edit in ScaleVault, not a change to this automation — and one key can
+      fan out to more than one action and/or target.
 - [ ] **Reverse feed (stretch)** — expose ScaleVault husbandry state (e.g. "overdue for weighing")
       as Home Assistant sensors for dashboards and automations
 
@@ -86,7 +90,7 @@ The integration lives under `custom_components/scalevault/`:
 | `config_flow.py` | UI setup flow (URL + API key, with validation) and the options flow (sensor picker) |
 | `telemetry.py` | State-change listener + batched/retried push of climate readings |
 | `select.py` | Feeding/enclosure target dropdown entities |
-| `services.py` | Quick-log services (`log_feeding`/`log_watering`/`log_cleaning`) |
+| `services.py` | Quick-log services (`log_feeding`/`log_watering`/`log_cleaning`/`log_action`) |
 | `__init__.py` | Config-entry setup / teardown |
 | `strings.json` / `translations/` | Config-flow and services UI text |
 
