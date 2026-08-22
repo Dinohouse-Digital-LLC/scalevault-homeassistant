@@ -1,0 +1,58 @@
+blueprint:
+  name: ScaleVault - Log feeding, watering, or cleaning
+  description: >-
+    Fire any trigger (a physical button, NFC tag scan, script, ...) and log a
+    feeding, water check, or cleaning directly to ScaleVault — no action-key
+    indirection. Leave target blank to use the matching ScaleVault select
+    entity's (`select.scalevault_feeding_target` /
+    `select.scalevault_enclosure_target`) current pick.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  source_url: https://github.com/Dinohouse-Digital-LLC/scalevault-homeassistant/blob/main/blueprints/automation/scalevault/quick_log_husbandry.yaml
+  input:
+    action_trigger:
+      name: Trigger
+      description: What should fire the log — e.g. a button press or a tag scan.
+      selector:
+        trigger: {}
+    log_action:
+      name: What to log
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: Feeding
+              value: log_feeding
+            - label: Water check
+              value: log_watering
+            - label: Cleaning
+              value: log_cleaning
+    target:
+      name: Target (optional)
+      description: >-
+        Animal code (e.g. A-0001, feeding only) or enclosure code (e.g.
+        E-0004). Leave blank to use the matching select entity's current pick.
+      default: ""
+      selector:
+        text: {}
+    notes:
+      name: Notes (optional)
+      default: ""
+      selector:
+        text: {}
+
+mode: single
+
+trigger: !input action_trigger
+
+variables:
+  chosen_action: !input log_action
+  target_input: !input target
+  notes_input: !input notes
+
+action:
+  - action: "scalevault.{{ chosen_action }}"
+    data:
+      target: "{{ target_input if target_input not in [None, ''] else omit }}"
+      notes: "{{ notes_input if notes_input not in [None, ''] else omit }}"

@@ -1,0 +1,43 @@
+blueprint:
+  name: ScaleVault - Quick-log action key
+  description: >-
+    Fire any trigger (a physical button, NFC tag scan, script, voice command,
+    ...) and log a ScaleVault action key via `scalevault.log_action`. What the
+    key actually does (which husbandry action(s), which target(s)) is
+    configured in ScaleVault under Settings -> Home Assistant, not here — so
+    reassigning what the button does is an edit there, not a change to this
+    automation.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  source_url: https://github.com/Dinohouse-Digital-LLC/scalevault-homeassistant/blob/main/blueprints/automation/scalevault/quick_log_action.yaml
+  input:
+    action_trigger:
+      name: Trigger
+      description: What should fire the log — e.g. a button press or a tag scan.
+      selector:
+        trigger: {}
+    key:
+      name: Action key
+      description: The action key's name, as configured in ScaleVault (Settings -> Home Assistant).
+      selector:
+        text: {}
+    notes:
+      name: Notes (optional)
+      description: Overrides the key's configured notes in ScaleVault, if any.
+      default: ""
+      selector:
+        text: {}
+
+mode: single
+
+trigger: !input action_trigger
+
+variables:
+  notes_input: !input notes
+
+action:
+  - action: scalevault.log_action
+    data:
+      key: !input key
+      notes: "{{ notes_input if notes_input not in [None, ''] else omit }}"

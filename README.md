@@ -55,6 +55,22 @@ The key is account-scoped and carries only the permissions you grant (climate te
 default; husbandry actions and read access are separate opt-ins). It is **not** a login and does
 not consume a user seat.
 
+## Blueprints
+
+Ready-made automations under [`blueprints/automation/scalevault/`](blueprints/automation/scalevault/) —
+import one via **Settings → Automations & Scenes → Blueprints → Import Blueprint**, pasting its
+raw GitHub URL, or copy the file into your `config/blueprints/automation/` directory manually.
+
+| Blueprint | What it does |
+| --- | --- |
+| [`quick_log_action.yaml`](blueprints/automation/scalevault/quick_log_action.yaml) | Any trigger (button, NFC tag, script, ...) → `scalevault.log_action` with a key you configured in ScaleVault's Settings → Home Assistant. |
+| [`quick_log_husbandry.yaml`](blueprints/automation/scalevault/quick_log_husbandry.yaml) | Any trigger → `log_feeding` / `log_watering` / `log_cleaning` directly, with an optional target, no action-key indirection. |
+| [`sensor_out_of_range.yaml`](blueprints/automation/scalevault/sensor_out_of_range.yaml) | Watches a temperature/humidity sensor and runs a notify action of your choice when it drifts outside a range you set — fires locally in Home Assistant, independent of any ScaleVault-side alerting. |
+
+None of these cover forwarding sensor readings to ScaleVault itself — that's the continuous
+sensor → enclosure mapping already built into the integration's **Configure** screen (step 4
+above), which batches and pushes automatically without any automation needed.
+
 ## Roadmap
 
 This integration is the Home Assistant half of ScaleVault's

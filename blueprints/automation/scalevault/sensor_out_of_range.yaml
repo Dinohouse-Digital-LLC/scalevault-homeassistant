@@ -1,0 +1,86 @@
+blueprint:
+  name: ScaleVault - Enclosure temperature/humidity out of range
+  description: >-
+    Watches a temperature or humidity sensor and runs your chosen action
+    (notify, TTS, whatever) when it drifts below or above a range you set.
+    This fires locally in Home Assistant — independent of, and faster than,
+    any threshold alert configured in ScaleVault itself. It does not change
+    what gets forwarded to ScaleVault; that mapping is set up separately
+    under the ScaleVault integration's Configure screen.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  source_url: https://github.com/Dinohouse-Digital-LLC/scalevault-homeassistant/blob/main/blueprints/automation/scalevault/sensor_out_of_range.yaml
+  input:
+    sensor:
+      name: Sensor
+      description: The temperature or humidity sensor to watch.
+      selector:
+        entity:
+          domain: sensor
+          device_class:
+            - temperature
+            - humidity
+    low_threshold:
+      name: Low threshold
+      description: Alert when the reading drops below this value.
+      selector:
+        number:
+          mode: box
+          step: 0.1
+    high_threshold:
+      name: High threshold
+      description: Alert when the reading rises above this value.
+      selector:
+        number:
+          mode: box
+          step: 0.1
+    for_duration:
+      name: Must stay out of range for
+      description: Ignore brief spikes/dips shorter than this.
+      default:
+        minutes: 5
+      selector:
+        duration: {}
+    enclosure_name:
+      name: Enclosure name (optional)
+      description: Used in the alert message. Leave blank to use the sensor's own name.
+      default: ""
+      selector:
+        text: {}
+    notify_action:
+      name: Notify action
+      description: >-
+        What to do when out of range. The message variables {{ enclosure }},
+        {{ direction }}, {{ current_value }}, {{ threshold }}, and {{ unit }}
+        are available to use here (e.g. in a notify action's message field).
+      selector:
+        action: {}
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - trigger: numeric_state
+    entity_id: !input sensor
+    below: !input low_threshold
+    for: !input for_duration
+    id: low
+  - trigger: numeric_state
+    entity_id: !input sensor
+    above: !input high_threshold
+    for: !input for_duration
+    id: high
+
+variables:
+  enclosure_name_input: !input enclosure_name
+  low_threshold_value: !input low_threshold
+  high_threshold_value: !input high_threshold
+  enclosure: "{{ enclosure_name_input if enclosure_name_input not in [None, ''] else trigger.to_state.name }}"
+  direction: "{{ 'below' if trigger.id == 'low' else 'above' }}"
+  threshold: "{{ low_threshold_value if trigger.id == 'low' else high_threshold_value }}"
+  current_value: "{{ trigger.to_state.state }}"
+  unit: "{{ trigger.to_state.attributes.unit_of_measurement or '' }}"
+
+action:
+  - !input notify_action
