@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from aiohttp import ClientError, ClientResponseError, ClientSession, ClientTimeout
+from aiohttp import ClientError, ClientSession, ClientTimeout
 
 from .const import API_ACTIONS, API_INGEST, API_TARGETS, API_VALIDATE, CLIENT_IDENTIFIER
 
@@ -90,13 +90,12 @@ class ScaleVaultClient:
                 if resp.status in (401, 403):
                     detail = await self._error_detail(resp)
                     raise ScaleVaultAuthError(detail or f"ScaleVault rejected the API key ({resp.status})")
-                resp.raise_for_status()
+                if resp.status >= 400:
+                    detail = await self._error_detail(resp)
+                    raise ScaleVaultConnectionError(detail or f"ScaleVault returned {resp.status}")
                 if resp.content_type == "application/json":
                     return await resp.json()
                 return None
-        except ClientResponseError as err:
-            _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
-            raise ScaleVaultConnectionError(str(err)) from err
         except (ClientError, TimeoutError) as err:
             _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
             raise ScaleVaultConnectionError(str(err)) from err

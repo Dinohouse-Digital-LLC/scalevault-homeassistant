@@ -50,7 +50,7 @@ def _reading_from_state(state: State, enclosure_code: str | None) -> dict[str, A
 
     reading: dict[str, Any] = {
         "external_device_id": state.entity_id,
-        "recorded_at": (state.last_changed or state.last_updated).isoformat(),
+        "recorded_at": (state.last_changed or state.last_updated).isoformat(timespec="milliseconds"),
     }
     if friendly_name:
         reading["friendly_name"] = friendly_name
