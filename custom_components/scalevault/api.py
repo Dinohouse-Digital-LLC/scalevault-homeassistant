@@ -96,10 +96,10 @@ class ScaleVaultClient:
                 return None
         except ClientResponseError as err:
             _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
-            raise ScaleVaultConnectionError from err
+            raise ScaleVaultConnectionError(str(err)) from err
         except (ClientError, TimeoutError) as err:
             _LOGGER.debug("ScaleVault request to %s failed: %s", path, err)
-            raise ScaleVaultConnectionError from err
+            raise ScaleVaultConnectionError(str(err)) from err
 
     @staticmethod
     async def _error_detail(resp: Any) -> str | None:

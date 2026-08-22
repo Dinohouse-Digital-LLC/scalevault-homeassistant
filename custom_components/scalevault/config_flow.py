@@ -14,11 +14,20 @@ from homeassistant.config_entries import (
     SubentryFlowResult,
 )
 from homeassistant.const import CONF_API_KEY
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultAuthError, ScaleVaultClient, ScaleVaultConnectionError
-from .const import BASE_URL, CONF_BASE_URL, CONF_ENCLOSURE_CODE, CONF_SENSOR_ENTITY_ID, DOMAIN, SUBENTRY_TYPE_SENSOR
+from .const import (
+    BASE_URL,
+    CONF_BASE_URL,
+    CONF_ENCLOSURE_CODE,
+    CONF_SENSOR_ENTITY_ID,
+    DOMAIN,
+    SECTION_ADVANCED,
+    SUBENTRY_TYPE_SENSOR,
+)
 
 _UNMAPPED = "Not mapped"
 
@@ -32,12 +41,13 @@ class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Collect the ScaleVault API key (and, in Advanced Mode, a base URL
-        override for pointing at a dev/staging server) and validate it."""
+        """Collect the ScaleVault API key (and, in the collapsed Advanced
+        section, a base URL override for pointing at a dev/staging server)
+        and validate it."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            base_url = user_input.get(CONF_BASE_URL, BASE_URL)
+            base_url = user_input[SECTION_ADVANCED][CONF_BASE_URL]
             client = ScaleVaultClient(
                 async_get_clientsession(self.hass), base_url, user_input[CONF_API_KEY]
             )
@@ -58,10 +68,15 @@ class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
                     data={CONF_API_KEY: user_input[CONF_API_KEY], CONF_BASE_URL: base_url},
                 )
 
-        schema_dict: dict[Any, Any] = {vol.Required(CONF_API_KEY): str}
-        if self.show_advanced_options:
-            schema_dict[vol.Optional(CONF_BASE_URL, default=BASE_URL)] = str
-        schema = vol.Schema(schema_dict)
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_API_KEY): str,
+                vol.Required(SECTION_ADVANCED): section(
+                    vol.Schema({vol.Optional(CONF_BASE_URL, default=BASE_URL): str}),
+                    {"collapsed": True},
+                ),
+            }
+        )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
