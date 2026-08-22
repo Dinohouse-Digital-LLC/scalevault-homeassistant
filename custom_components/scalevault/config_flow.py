@@ -111,7 +111,11 @@ class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
     friendly name shown instead of a raw entity_id.
     """
 
-    async def _async_enclosure_options(self) -> list[dict[str, str]]:
+    async def _async_form_context(self) -> tuple[list[dict[str, str]], dict[str, str]]:
+        """Enclosure dropdown options, plus description placeholders warning if
+        Climate History is off — readings from a mapping added now would be
+        silently dropped server-side (see ingest's climate_history check)
+        until the account enables it, so surface that before saving instead."""
         entry = self._get_entry()
         client = ScaleVaultClient(
             async_get_clientsession(self.hass),
@@ -119,13 +123,28 @@ class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
             entry.data[CONF_API_KEY],
         )
         try:
-            targets = await client.async_list_targets()
+            data = await client.async_get_targets()
         except (ScaleVaultAuthError, ScaleVaultConnectionError):
-            targets = []
+            data = {}
+        targets = data.get("targets", [])
         enclosures = [t for t in targets if t.get("type") == "enclosure"]
-        return [{"value": "", "label": _UNMAPPED}] + [
+        enclosure_options = [{"value": "", "label": _UNMAPPED}] + [
             {"value": t["code"], "label": f"{t['name']} ({t['code']})"} for t in enclosures
         ]
+        # Default to "enabled" when the flag is missing (older server) or the
+        # fetch above failed — an unrelated network hiccup shouldn't show a
+        # scary warning that isn't actually true.
+        climate_history_enabled = bool(data.get("climate_history_enabled", True))
+        warning = (
+            ""
+            if climate_history_enabled
+            else (
+                "\n\n⚠️ Climate History isn't enabled for this ScaleVault account — readings from this "
+                "sensor won't be saved until it is. You can still add the mapping now; it'll start working "
+                "the moment the feature is turned on."
+            )
+        )
+        return enclosure_options, {"climate_history_status": warning}
 
     @staticmethod
     def _schema(
@@ -171,9 +190,11 @@ class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
                 unique_id=sensor_entity_id,
             )
 
-        enclosure_options = await self._async_enclosure_options()
+        enclosure_options, description_placeholders = await self._async_form_context()
         return self.async_show_form(
-            step_id="user", data_schema=self._schema(enclosure_options, default_sensor=None, default_enclosure="")
+            step_id="user",
+            data_schema=self._schema(enclosure_options, default_sensor=None, default_enclosure=""),
+            description_placeholders=description_placeholders,
         )
 
     async def async_step_reconfigure(
@@ -192,7 +213,7 @@ class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
                 data=self._data_from(user_input),
             )
 
-        enclosure_options = await self._async_enclosure_options()
+        enclosure_options, description_placeholders = await self._async_form_context()
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self._schema(
@@ -200,4 +221,5 @@ class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
                 default_sensor=subentry.data.get(CONF_SENSOR_ENTITY_ID),
                 default_enclosure=subentry.data.get(CONF_ENCLOSURE_CODE) or "",
             ),
+            description_placeholders=description_placeholders,
         )

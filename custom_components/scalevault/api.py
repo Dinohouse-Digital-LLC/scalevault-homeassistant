@@ -55,10 +55,18 @@ class ScaleVaultClient:
         data = await self._request("POST", API_VALIDATE)
         return data if isinstance(data, dict) else {}
 
+    async def async_get_targets(self) -> dict[str, Any]:
+        """Return the account's targets plus HA-relevant account capability flags
+        (currently `climate_history_enabled`) — a superset of async_list_targets(),
+        used where the caller needs to warn about, not just list, account state.
+        """
+        data = await self._request("GET", API_TARGETS)
+        return data if isinstance(data, dict) else {}
+
     async def async_list_targets(self) -> list[dict[str, Any]]:
         """Return the account's enclosures/animals for config-flow dropdowns."""
-        data = await self._request("GET", API_TARGETS)
-        return data.get("targets", []) if isinstance(data, dict) else []
+        data = await self.async_get_targets()
+        return data.get("targets", [])
 
     async def async_push_readings(self, readings: list[dict[str, Any]]) -> None:
         """Push a batch of climate readings to ScaleVault."""

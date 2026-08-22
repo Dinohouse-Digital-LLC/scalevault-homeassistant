@@ -32,7 +32,7 @@
       "step": {
         "user": {
           "title": "Add a sensor mapping",
-          "description": "Pick a temperature/humidity sensor to forward to ScaleVault, and optionally which enclosure it belongs to. State changes are batched and pushed roughly once a minute.",
+          "description": "Pick a temperature/humidity sensor to forward to ScaleVault, and optionally which enclosure it belongs to. State changes are batched and pushed roughly once a minute.{climate_history_status}",
           "data": {
             "sensor_entity_id": "Sensor",
             "enclosure_code": "Enclosure"
@@ -40,7 +40,7 @@
         },
         "reconfigure": {
           "title": "Edit sensor mapping",
-          "description": "Change which sensor forwards, or which enclosure it maps to.",
+          "description": "Change which sensor forwards, or which enclosure it maps to.{climate_history_status}",
           "data": {
             "sensor_entity_id": "Sensor",
             "enclosure_code": "Enclosure"

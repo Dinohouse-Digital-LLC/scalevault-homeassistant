@@ -16,6 +16,7 @@ from typing import Any
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State, callback
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .api import ScaleVaultAuthError, ScaleVaultClient, ScaleVaultConnectionError
@@ -24,6 +25,13 @@ from .const import TELEMETRY_FLUSH_INTERVAL_SECONDS, TELEMETRY_MAX_BUFFERED_READ
 _LOGGER = logging.getLogger(__name__)
 
 _HUMIDITY_DEVICE_CLASS = "humidity"
+
+# ScaleVaultAuthError covers both a bad/revoked key and a disabled feature
+# (e.g. Climate History) — neither resolves itself before the next tick, so
+# retrying every TELEMETRY_FLUSH_INTERVAL_SECONDS forever just spams a push
+# that's guaranteed to be rejected again. Back off instead, doubling up to
+# this cap, and reset to normal cadence the moment a push succeeds.
+_AUTH_BACKOFF_MAX_SECONDS = 3600
 
 
 def _reading_from_state(state: State, enclosure_code: str | None) -> dict[str, Any] | None:
@@ -80,6 +88,8 @@ class ScaleVaultTelemetryForwarder:
         self._buffer: list[dict[str, Any]] = []
         self._unsub_state: Any = None
         self._unsub_timer: Any = None
+        self._auth_backoff_seconds = 0
+        self._next_flush_at: datetime | None = None
 
     def async_start(self) -> None:
         if not self._sensor_entity_ids:
@@ -115,15 +125,34 @@ class ScaleVaultTelemetryForwarder:
             _LOGGER.warning("ScaleVault telemetry buffer full, dropping %d oldest reading(s)", overflow)
             del self._buffer[:overflow]
 
-    async def _async_flush(self, _now: datetime | None = None) -> None:
+    async def _async_flush(self, now: datetime | None = None) -> None:
         if not self._buffer:
             return
+        now = now or dt_util.utcnow()
+        if self._next_flush_at is not None and now < self._next_flush_at:
+            return  # backing off after an auth-class rejection — see _AUTH_BACKOFF_MAX_SECONDS
+
         batch = self._buffer
         self._buffer = []
         try:
             await self._client.async_push_readings(batch)
-        except (ScaleVaultAuthError, ScaleVaultConnectionError) as err:
-            _LOGGER.warning("Could not push ScaleVault telemetry, will retry next interval: %s", err)
+        except ScaleVaultAuthError as err:
+            self._auth_backoff_seconds = min(
+                self._auth_backoff_seconds * 2 if self._auth_backoff_seconds else TELEMETRY_FLUSH_INTERVAL_SECONDS,
+                _AUTH_BACKOFF_MAX_SECONDS,
+            )
+            self._next_flush_at = now + timedelta(seconds=self._auth_backoff_seconds)
+            _LOGGER.warning(
+                "ScaleVault rejected telemetry, backing off %ds before retrying: %s",
+                self._auth_backoff_seconds,
+                err,
+            )
             # Put the batch back (ahead of anything buffered meanwhile) rather
             # than lose it — bounded by the same overflow check as above.
             self._buffer = (batch + self._buffer)[-TELEMETRY_MAX_BUFFERED_READINGS:]
+        except ScaleVaultConnectionError as err:
+            _LOGGER.warning("Could not push ScaleVault telemetry, will retry next interval: %s", err)
+            self._buffer = (batch + self._buffer)[-TELEMETRY_MAX_BUFFERED_READINGS:]
+        else:
+            self._auth_backoff_seconds = 0
+            self._next_flush_at = None
