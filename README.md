@@ -22,7 +22,7 @@ ScaleVault, nothing to reverse-engineer.
 
 ## Requirements
 
-- Home Assistant 2024.12 or newer
+- Home Assistant 2025.3 or newer (needs config subentry support, for per-sensor mapping)
 - A ScaleVault account with an **API key** (generated under **Account Settings → Integrations**)
 
 ## Installation
@@ -47,13 +47,19 @@ and restart.
    Copy it — it is shown only once.
 2. In Home Assistant: **Settings → Devices & Services → Add Integration → ScaleVault**.
 3. Paste the API key.
-4. To forward climate telemetry, open the ScaleVault integration's **Configure**, pick your
-   temperature/humidity sensors, then optionally map each one to an enclosure. State changes are
-   batched and pushed automatically — revisit Configure any time you add, remove, or remap sensors.
+4. To forward climate telemetry, open the ScaleVault integration card and choose **+ Add sensor
+   mapping**: pick a temperature/humidity sensor and, optionally, which enclosure it belongs to.
+   Repeat per sensor — each one is its own entry, editable or removable independently. State
+   changes are batched and pushed automatically once a sensor is mapped.
 
 The key is account-scoped and carries only the permissions you grant (climate telemetry by
 default; husbandry actions and read access are separate opt-ins). It is **not** a login and does
 not consume a user seat.
+
+If ScaleVault ever rejects the stored key (e.g. it was revoked or rotated), Home Assistant shows a
+**Reauthenticate** prompt on the integration — paste the new key there. To check sooner than that,
+press the **Re-verify connection** button entity, which re-checks the key without reloading the
+integration or interrupting telemetry buffering.
 
 ## Blueprints
 
@@ -68,8 +74,8 @@ raw GitHub URL, or copy the file into your `config/blueprints/automation/` direc
 | [`sensor_out_of_range.yaml`](blueprints/automation/scalevault/sensor_out_of_range.yaml) | Watches a temperature/humidity sensor and runs a notify action of your choice when it drifts outside a range you set — fires locally in Home Assistant, independent of any ScaleVault-side alerting. |
 
 None of these cover forwarding sensor readings to ScaleVault itself — that's the continuous
-sensor → enclosure mapping already built into the integration's **Configure** screen (step 4
-above), which batches and pushes automatically without any automation needed.
+sensor → enclosure mapping already built into the integration (step 4 above, **+ Add sensor
+mapping**), which batches and pushes automatically without any automation needed.
 
 ## Roadmap
 
@@ -77,13 +83,15 @@ This integration is the Home Assistant half of ScaleVault's
 [`home-assistant-integration` plan](https://github.com/Dinohouse-Digital-LLC). Planned capabilities,
 roughly in build order:
 
-- [x] **Climate telemetry → ScaleVault** — pick sensors in the integration's options (gear icon → Configure),
-      optionally map each one to an enclosure right there, and their state changes are batched and pushed
+- [x] **Climate telemetry → ScaleVault** — add one subentry per sensor from the integration card,
+      optionally mapping each to an enclosure right there, and their state changes are batched and pushed
       automatically — no `rest_command` YAML, no manual device mapping required.
 - [x] **Target dropdowns** — `select.scalevault_feeding_target` / `select.scalevault_enclosure_target`
       list your account's animals/enclosures by name (`targets:list` scope), fetched at setup.
 - [x] **Connection status in ScaleVault** — Settings → Home Assistant shows whether this component or the
-      manual webhook recipe is actually talking to your account.
+      manual webhook recipe is actually talking to your account. On the Home Assistant side, setup/reload
+      re-validates the key (triggering reauth if it's been revoked), and a **Re-verify connection** button
+      checks on demand.
 - [x] **Quick-log actions** — `scalevault.log_feeding` / `log_watering` / `log_cleaning` services so a
       physical button, NFC tag, or voice command logs a husbandry event with one tap. `target` is now
       optional — omit it to use the matching select entity's current pick instead of a hand-typed code.
@@ -103,11 +111,12 @@ The integration lives under `custom_components/scalevault/`:
 | `manifest.json` | Integration metadata (domain, version, requirements) |
 | `const.py` | Domain + API path constants |
 | `api.py` | Async HTTP client for the ScaleVault API |
-| `config_flow.py` | UI setup flow (URL + API key, with validation) and the options flow (sensor picker) |
+| `config_flow.py` | UI setup flow (URL + API key, with validation and reauth) and the sensor-mapping subentry flow |
 | `telemetry.py` | State-change listener + batched/retried push of climate readings |
 | `select.py` | Feeding/enclosure target dropdown entities |
+| `button.py` | On-demand "Re-verify connection" button entity |
 | `services.py` | Quick-log services (`log_feeding`/`log_watering`/`log_cleaning`/`log_action`) |
-| `__init__.py` | Config-entry setup / teardown |
+| `__init__.py` | Config-entry setup/teardown, API-key validation, and the one-time options→subentries migration |
 | `strings.json` / `translations/` | Config-flow and services UI text |
 
 `push`, `pull_request`, and a nightly schedule run **hassfest** and **HACS** validation via

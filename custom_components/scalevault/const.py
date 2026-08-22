@@ -21,12 +21,21 @@ API_TARGETS = "/api/ha/targets"
 API_INGEST = "/api/thermostats/ingest"
 API_ACTIONS = "/api/ha/actions"
 
-# Options-flow keys: which sensor entity_ids the user has chosen to forward
-# as climate telemetry, and which ScaleVault enclosure code each maps to (see
-# telemetry.py). Live in entry.options, not entry.data, since they're
-# changeable post-setup without re-entering the API key.
+# Pre-0.2.0 options-flow keys (a sensor multi-select plus an entity_id-keyed
+# map, both stored in entry.options). Superseded by one config subentry per
+# sensor (see SUBENTRY_TYPE_SENSOR below) — kept only so async_migrate_entry
+# in __init__.py can read old entries' options one last time and convert them.
 CONF_SENSORS = "sensors"
 CONF_SENSOR_ENCLOSURE_MAP = "sensor_enclosure_map"
+
+# One config subentry per forwarded sensor (config_flow.py's
+# ScaleVaultSensorMappingSubentryFlow), each storing CONF_SENSOR_ENTITY_ID and
+# optionally CONF_ENCLOSURE_CODE in its data. Replaces the options flow above —
+# subentries can be added/edited/removed individually instead of through one
+# multi-select-then-map options screen.
+SUBENTRY_TYPE_SENSOR = "sensor_mapping"
+CONF_SENSOR_ENTITY_ID = "sensor_entity_id"
+CONF_ENCLOSURE_CODE = "enclosure_code"
 
 # How often buffered readings are pushed to ScaleVault, and the max readings
 # held in memory while ScaleVault is unreachable (matches the server's

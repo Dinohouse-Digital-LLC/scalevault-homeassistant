@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
@@ -9,14 +10,15 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    ConfigSubentryFlow,
+    SubentryFlowResult,
 )
 from homeassistant.const import CONF_API_KEY
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ScaleVaultAuthError, ScaleVaultClient, ScaleVaultConnectionError
-from .const import BASE_URL, CONF_BASE_URL, CONF_SENSOR_ENCLOSURE_MAP, CONF_SENSORS, DOMAIN
+from .const import BASE_URL, CONF_BASE_URL, CONF_ENCLOSURE_CODE, CONF_SENSOR_ENTITY_ID, DOMAIN, SUBENTRY_TYPE_SENSOR
 
 _UNMAPPED = "Not mapped"
 
@@ -25,6 +27,7 @@ class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for ScaleVault."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -61,86 +64,140 @@ class ScaleVaultConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(schema_dict)
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    @staticmethod
-    def async_get_options_flow(config_entry: ConfigEntry) -> ScaleVaultOptionsFlow:
-        return ScaleVaultOptionsFlow()
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Entry point when ScaleVault rejects the stored API key at setup time."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for a replacement API key for the entry ScaleVault rejected."""
+        errors: dict[str, str] = {}
+        reauth_entry = self._get_reauth_entry()
+
+        if user_input is not None:
+            base_url = reauth_entry.data.get(CONF_BASE_URL, BASE_URL)
+            client = ScaleVaultClient(
+                async_get_clientsession(self.hass), base_url, user_input[CONF_API_KEY]
+            )
+            try:
+                await client.async_validate()
+            except ScaleVaultAuthError:
+                errors["base"] = "invalid_auth"
+            except ScaleVaultConnectionError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_and_abort(
+                    reauth_entry, data_updates={CONF_API_KEY: user_input[CONF_API_KEY]}
+                )
+
+        schema = vol.Schema({vol.Required(CONF_API_KEY): str})
+        return self.async_show_form(step_id="reauth_confirm", data_schema=schema, errors=errors)
+
+    @classmethod
+    def async_get_supported_subentry_types(
+        cls, config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """One subentry per forwarded sensor — see ScaleVaultSensorMappingSubentryFlow."""
+        return {SUBENTRY_TYPE_SENSOR: ScaleVaultSensorMappingSubentryFlow}
 
 
-class ScaleVaultOptionsFlow(OptionsFlow):
-    """Pick which climate sensors get forwarded to ScaleVault, and (optionally)
-    which enclosure each maps to.
+class ScaleVaultSensorMappingSubentryFlow(ConfigSubentryFlow):
+    """Add, or edit, a single sensor -> ScaleVault-enclosure mapping.
 
-    Step 1 (`init`) is a plain multi-select of `sensor` entities
-    (temperature/humidity device class) — see telemetry.py for the
-    state-change listener this feeds. Step 2 (`map`) shows one enclosure
-    dropdown per selected sensor, populated from `GET /api/ha/targets`, so
-    readings can carry an `enclosure_code` and skip ScaleVault's manual
-    device mapper entirely. Mapping is optional — an unmapped sensor still
-    forwards, and lands in ScaleVault's "unmapped device" list as before.
+    Replaces the old options flow's multi-select-then-map pages: each mapping
+    is now its own subentry, addable/editable/removable independently from
+    Settings -> Devices & Services -> ScaleVault, with the sensor's own
+    friendly name shown instead of a raw entity_id.
     """
 
-    def __init__(self) -> None:
-        self._sensors: list[str] = []
-        self._code_by_label: dict[str, str] = {}
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            self._sensors = user_input.get(CONF_SENSORS, [])
-            if not self._sensors:
-                return self.async_create_entry(data={CONF_SENSORS: [], CONF_SENSOR_ENCLOSURE_MAP: {}})
-            return await self.async_step_map()
-
-        current = self.config_entry.options.get(CONF_SENSORS, [])
-        schema = vol.Schema(
-            {
-                vol.Optional(CONF_SENSORS, default=current): selector.selector(
-                    {
-                        "entity": {
-                            "domain": "sensor",
-                            "device_class": ["temperature", "humidity"],
-                            "multiple": True,
-                        }
-                    }
-                )
-            }
-        )
-        return self.async_show_form(step_id="init", data_schema=schema)
-
-    async def async_step_map(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            new_map = {
-                entity_id: self._code_by_label[label]
-                for entity_id in self._sensors
-                if (label := user_input.get(entity_id, _UNMAPPED)) != _UNMAPPED
-            }
-            return self.async_create_entry(data={CONF_SENSORS: self._sensors, CONF_SENSOR_ENCLOSURE_MAP: new_map})
-
+    async def _async_enclosure_options(self) -> list[dict[str, str]]:
+        entry = self._get_entry()
         client = ScaleVaultClient(
             async_get_clientsession(self.hass),
-            self.config_entry.data.get(CONF_BASE_URL, BASE_URL),
-            self.config_entry.data[CONF_API_KEY],
+            entry.data.get(CONF_BASE_URL, BASE_URL),
+            entry.data[CONF_API_KEY],
         )
         try:
             targets = await client.async_list_targets()
         except (ScaleVaultAuthError, ScaleVaultConnectionError):
             targets = []
         enclosures = [t for t in targets if t.get("type") == "enclosure"]
-        self._code_by_label = {f"{t['name']} ({t['code']})": t["code"] for t in enclosures}
-        label_by_code = {code: label for label, code in self._code_by_label.items()}
-        options = [_UNMAPPED, *self._code_by_label]
+        return [{"value": "", "label": _UNMAPPED}] + [
+            {"value": t["code"], "label": f"{t['name']} ({t['code']})"} for t in enclosures
+        ]
 
-        # Each field's key is the raw entity_id — voluptuous field labels are
-        # shown as-is in the HA UI, and there's no per-dynamic-field
-        # translation hook, so the sensor's friendly name isn't shown here
-        # (it was already visible when picking sensors in step 1).
-        current_map: dict[str, str] = self.config_entry.options.get(CONF_SENSOR_ENCLOSURE_MAP, {})
+    @staticmethod
+    def _schema(
+        enclosure_options: list[dict[str, str]], *, default_sensor: str | None, default_enclosure: str
+    ) -> vol.Schema:
+        sensor_selector = selector.selector(
+            {"entity": {"domain": "sensor", "device_class": ["temperature", "humidity"]}}
+        )
         schema_dict: dict[Any, Any] = {
-            vol.Optional(entity_id, default=label_by_code.get(current_map.get(entity_id), _UNMAPPED)): vol.In(options)
-            for entity_id in self._sensors
+            (
+                vol.Required(CONF_SENSOR_ENTITY_ID, default=default_sensor)
+                if default_sensor is not None
+                else vol.Required(CONF_SENSOR_ENTITY_ID)
+            ): sensor_selector,
+            vol.Optional(CONF_ENCLOSURE_CODE, default=default_enclosure): selector.selector(
+                {"select": {"options": enclosure_options, "mode": "dropdown"}}
+            ),
         }
+        return vol.Schema(schema_dict)
 
-        return self.async_show_form(step_id="map", data_schema=vol.Schema(schema_dict))
+    def _title_for(self, sensor_entity_id: str) -> str:
+        state = self.hass.states.get(sensor_entity_id)
+        return state.name if state else sensor_entity_id
+
+    @staticmethod
+    def _data_from(user_input: dict[str, Any]) -> MappingProxyType[str, Any]:
+        return MappingProxyType(
+            {
+                CONF_SENSOR_ENTITY_ID: user_input[CONF_SENSOR_ENTITY_ID],
+                CONF_ENCLOSURE_CODE: user_input.get(CONF_ENCLOSURE_CODE) or None,
+            }
+        )
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Add a new sensor -> enclosure mapping."""
+        if user_input is not None:
+            sensor_entity_id = user_input[CONF_SENSOR_ENTITY_ID]
+            return self.async_create_entry(
+                title=self._title_for(sensor_entity_id),
+                data=self._data_from(user_input),
+                unique_id=sensor_entity_id,
+            )
+
+        enclosure_options = await self._async_enclosure_options()
+        return self.async_show_form(
+            step_id="user", data_schema=self._schema(enclosure_options, default_sensor=None, default_enclosure="")
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Change the sensor and/or enclosure for an existing mapping."""
+        subentry = self._get_reconfigure_subentry()
+
+        if user_input is not None:
+            sensor_entity_id = user_input[CONF_SENSOR_ENTITY_ID]
+            return self.async_update_and_abort(
+                self._get_entry(),
+                subentry,
+                unique_id=sensor_entity_id,
+                title=self._title_for(sensor_entity_id),
+                data=self._data_from(user_input),
+            )
+
+        enclosure_options = await self._async_enclosure_options()
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self._schema(
+                enclosure_options,
+                default_sensor=subentry.data.get(CONF_SENSOR_ENTITY_ID),
+                default_enclosure=subentry.data.get(CONF_ENCLOSURE_CODE) or "",
+            ),
+        )

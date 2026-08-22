@@ -8,6 +8,13 @@
           "api_key": "API key",
           "base_url": "ScaleVault URL (advanced — leave default unless testing against a dev/staging server)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect ScaleVault",
+        "description": "ScaleVault rejected the stored API key. Paste a new one generated under Account Settings → Integrations.",
+        "data": {
+          "api_key": "API key"
+        }
       }
     },
     "error": {
@@ -15,21 +22,34 @@
       "invalid_auth": "Invalid API key."
     },
     "abort": {
-      "already_configured": "This ScaleVault account is already configured."
+      "already_configured": "This ScaleVault account is already configured.",
+      "reauth_successful": "Reconnected to ScaleVault."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "ScaleVault climate telemetry",
-        "description": "Pick which temperature/humidity sensors to forward to ScaleVault. Their state changes are batched and pushed roughly once a minute.",
-        "data": {
-          "sensors": "Sensors to forward"
+  "config_subentries": {
+    "sensor_mapping": {
+      "title": "ScaleVault sensor mapping",
+      "step": {
+        "user": {
+          "title": "Add a sensor mapping",
+          "description": "Pick a temperature/humidity sensor to forward to ScaleVault, and optionally which enclosure it belongs to. State changes are batched and pushed roughly once a minute.",
+          "data": {
+            "sensor_entity_id": "Sensor",
+            "enclosure_code": "Enclosure"
+          }
+        },
+        "reconfigure": {
+          "title": "Edit sensor mapping",
+          "description": "Change which sensor forwards, or which enclosure it maps to.",
+          "data": {
+            "sensor_entity_id": "Sensor",
+            "enclosure_code": "Enclosure"
+          }
         }
       },
-      "map": {
-        "title": "Map sensors to enclosures",
-        "description": "Optional: pick which ScaleVault enclosure each sensor belongs to, so readings land there automatically instead of showing up as an unmapped device. Each field below is one of the sensors you just selected (labeled by entity ID)."
+      "abort": {
+        "already_configured": "This sensor already has a ScaleVault mapping.",
+        "reconfigure_successful": "Sensor mapping updated."
       }
     }
   },
