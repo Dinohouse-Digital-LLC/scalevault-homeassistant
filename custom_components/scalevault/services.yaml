@@ -8,8 +8,9 @@ log_feeding:
       name: Target
       description: >-
         Animal code (e.g. A-0001) or enclosure code (e.g. E-0004) — a
-        single-animal enclosure resolves to that animal automatically.
-        Leave blank to use the "Feeding target" select entity's current pick.
+        single-animal enclosure resolves to that animal automatically. Use
+        "all" to feed every animal in the account. Leave blank to use the
+        "Feeding target" select entity's current pick.
       required: false
       example: "A-0001"
       selector:
@@ -30,8 +31,9 @@ log_watering:
     target:
       name: Target
       description: >-
-        Enclosure code (e.g. E-0004). Leave blank to use the "Enclosure
-        target" select entity's current pick.
+        Enclosure code (e.g. E-0004). Use "all" to log a water check on every
+        enclosure in the account. Leave blank to use the "Enclosure target"
+        select entity's current pick.
       required: false
       example: "E-0004"
       selector:
@@ -52,8 +54,9 @@ log_cleaning:
     target:
       name: Target
       description: >-
-        Enclosure code (e.g. E-0004). Leave blank to use the "Enclosure
-        target" select entity's current pick.
+        Enclosure code (e.g. E-0004). Use "all" to log a cleaning on every
+        enclosure in the account. Leave blank to use the "Enclosure target"
+        select entity's current pick.
       required: false
       example: "E-0004"
       selector:

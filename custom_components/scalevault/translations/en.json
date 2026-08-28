@@ -68,7 +68,7 @@
       "fields": {
         "target": {
           "name": "Target",
-          "description": "Animal code (e.g. A-0001) or enclosure code (e.g. E-0004) — a single-animal enclosure resolves to that animal automatically. Leave blank to use the \"Feeding target\" select entity's current pick."
+          "description": "Animal code (e.g. A-0001) or enclosure code (e.g. E-0004) — a single-animal enclosure resolves to that animal automatically. Use \"all\" to feed every animal in the account. Leave blank to use the \"Feeding target\" select entity's current pick."
         },
         "notes": {
           "name": "Notes",
@@ -82,7 +82,7 @@
       "fields": {
         "target": {
           "name": "Target",
-          "description": "Enclosure code (e.g. E-0004). Leave blank to use the \"Enclosure target\" select entity's current pick."
+          "description": "Enclosure code (e.g. E-0004). Use \"all\" to apply to every enclosure in the account. Leave blank to use the \"Enclosure target\" select entity's current pick."
         },
         "notes": {
           "name": "Notes",
@@ -96,7 +96,7 @@
       "fields": {
         "target": {
           "name": "Target",
-          "description": "Enclosure code (e.g. E-0004). Leave blank to use the \"Enclosure target\" select entity's current pick."
+          "description": "Enclosure code (e.g. E-0004). Use \"all\" to apply to every enclosure in the account. Leave blank to use the \"Enclosure target\" select entity's current pick."
         },
         "notes": {
           "name": "Notes",

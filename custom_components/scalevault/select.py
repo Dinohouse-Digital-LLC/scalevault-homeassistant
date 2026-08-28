@@ -24,16 +24,30 @@ _NO_TARGETS_OPTION = "No targets available — reload the integration"
 
 
 class ScaleVaultTargetSelect(SelectEntity):
-    """A dropdown of ScaleVault target codes, labeled by name."""
+    """A dropdown of ScaleVault target codes, labeled by name.
+
+    Includes an `all_label` option (e.g. "All enclosures") mapped to the
+    server-side `"all"` target sentinel, which ScaleVault fans out to every
+    matching animal/enclosure — see app/api/ha/actions/route.ts:expandTarget.
+    """
 
     _attr_should_poll = False
 
-    def __init__(self, entry: ConfigEntry, unique_suffix: str, name: str, targets: list[dict[str, Any]]) -> None:
+    def __init__(
+        self, entry: ConfigEntry, unique_suffix: str, name: str, all_label: str, targets: list[dict[str, Any]]
+    ) -> None:
         self._targets_by_label = {f"{t['name']} ({t['code']})": t["code"] for t in targets}
+        # Default selection stays a specific target, never "all" — a button
+        # pressed before anyone touches this dropdown must not fan out to
+        # every animal/enclosure by surprise. "all" is appended so it's still
+        # reachable, just never the initial pick.
+        first_specific_option = next(iter(self._targets_by_label), None)
+        if targets:
+            self._targets_by_label[all_label] = "all"
         self._attr_unique_id = f"{entry.entry_id}_{unique_suffix}"
         self._attr_name = name
         self._attr_options = list(self._targets_by_label) or [_NO_TARGETS_OPTION]
-        self._attr_current_option = self._attr_options[0]
+        self._attr_current_option = first_specific_option or self._attr_options[0]
 
     @property
     def current_code(self) -> str | None:
@@ -60,8 +74,12 @@ async def async_setup_entry(
     animals = [t for t in targets if t.get("type") == "animal"]
     enclosures = [t for t in targets if t.get("type") == "enclosure"]
 
-    feeding_select = ScaleVaultTargetSelect(entry, "feeding_target", "ScaleVault Feeding target", animals)
-    enclosure_select = ScaleVaultTargetSelect(entry, "enclosure_target", "ScaleVault Enclosure target", enclosures)
+    feeding_select = ScaleVaultTargetSelect(
+        entry, "feeding_target", "ScaleVault Feeding target", "All animals", animals
+    )
+    enclosure_select = ScaleVaultTargetSelect(
+        entry, "enclosure_target", "ScaleVault Enclosure target", "All enclosures", enclosures
+    )
     entry_data["feeding_select"] = feeding_select
     entry_data["enclosure_select"] = enclosure_select
 
