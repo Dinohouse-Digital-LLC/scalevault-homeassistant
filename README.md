@@ -1,7 +1,7 @@
 # ScaleVault for Home Assistant
 
 A [Home Assistant](https://www.home-assistant.io/) custom integration that connects your
-[ScaleVault](https://scalevault.com) reptile-husbandry account to Home Assistant.
+[ScaleVault](https://scalevault.app) reptile-husbandry account to Home Assistant.
 
 Bring temperature and humidity from **any** Home Assistant–supported sensor into ScaleVault —
 Inkbird, Govee, SwitchBot, Zigbee/Z-Wave/BTHome, MQTT, and the rest — without ScaleVault having
