@@ -4,10 +4,13 @@ A [Home Assistant](https://www.home-assistant.io/) custom integration that conne
 [ScaleVault](https://scalevault.app) reptile-husbandry account to Home Assistant.
 
 Bring temperature and humidity from **any** Home Assistant–supported sensor into ScaleVault —
-Inkbird, Govee, SwitchBot, Zigbee/Z-Wave/BTHome, MQTT, and the rest — without ScaleVault having
-to build a driver for each one. Home Assistant already speaks to the hardware; this integration
-forwards the readings to ScaleVault, where they attach to your enclosures for history and
-threshold alerts.
+SensorPush, Inkbird, Govee, SwitchBot, Zigbee/Z-Wave/BTHome, MQTT, and the rest — without
+ScaleVault having to build a driver for each one. Home Assistant already speaks to the hardware;
+this integration forwards the readings to ScaleVault, where they attach to your enclosures as
+climate history. On ScaleVault's Colony plan and above, temperature and humidity
+[alert rules](https://scalevault.app/docs/alert-rules) can notify you when an enclosure drifts out
+of range or stops reporting; on any plan, the [`sensor_out_of_range`](#blueprints) blueprint
+alerts locally in Home Assistant.
 
 It also works the other way: a physical button, NFC tag, voice command or any automation can log a
 feeding, water check or cleaning in ScaleVault with one service call. See [Features](#features).
